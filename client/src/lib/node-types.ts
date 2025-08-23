@@ -45,11 +45,14 @@ export const NODE_TYPES = {
   },
   agent: {
     label: 'AI Agent',
-    description: 'Multi-tool AI agent with memory',
+    description: 'Multi-provider AI agent with configurable LLM',
     category: 'ai',
     color: 'amber',
     defaultData: {
+      provider: 'openai',
       model: 'gpt-4o',
+      temperature: 0.7,
+      maxTokens: 500,
       tools: ['search', 'calculator'],
       memory: true,
       prompt: 'You are an AI agent with access to tools.'

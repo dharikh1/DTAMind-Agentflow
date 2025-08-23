@@ -10,6 +10,7 @@ import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { NODE_TYPES } from '@/lib/node-types';
+import { LLM_PROVIDERS, getProviderModels, getProviderName, supportsSystemPrompt } from '@/lib/llm-providers';
 
 interface PropertiesPanelProps {
   selectedNode: Node | null;
@@ -258,6 +259,149 @@ export function PropertiesPanel({
                     className="mt-1"
                     data-testid="user-message-input"
                   />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {selectedNode.data.nodeType === 'agent' && (
+            <div>
+              <Label className="text-xs font-semibold text-gray-700 uppercase tracking-wide">
+                AI Agent Configuration
+              </Label>
+              <div className="mt-2 space-y-3">
+                <div>
+                  <Label htmlFor="provider" className="text-sm font-medium text-gray-700">
+                    LLM Provider
+                  </Label>
+                  <Select 
+                    value={selectedNode.data.provider || 'openai'} 
+                    onValueChange={(value) => {
+                      updateNodeData('provider', value);
+                      // Reset model when provider changes
+                      const models = getProviderModels(value);
+                      if (models.length > 0) {
+                        updateNodeData('model', models[0]);
+                      }
+                    }}
+                  >
+                    <SelectTrigger className="mt-1" data-testid="provider-select">
+                      <SelectValue placeholder="Select provider" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(LLM_PROVIDERS).map(([id, provider]) => (
+                        <SelectItem key={id} value={id}>
+                          {provider.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div>
+                  <Label htmlFor="model" className="text-sm font-medium text-gray-700">
+                    Model
+                  </Label>
+                  <Select 
+                    value={selectedNode.data.model || 'gpt-4o'} 
+                    onValueChange={(value) => updateNodeData('model', value)}
+                  >
+                    <SelectTrigger className="mt-1" data-testid="agent-model-select">
+                      <SelectValue placeholder="Select model" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {getProviderModels(selectedNode.data.provider || 'openai').map((model) => (
+                        <SelectItem key={model} value={model}>
+                          {model}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div>
+                  <Label htmlFor="temperature" className="text-sm font-medium text-gray-700">
+                    Temperature: {selectedNode.data.temperature || 0.7}
+                  </Label>
+                  <Slider
+                    value={[selectedNode.data.temperature || 0.7]}
+                    onValueChange={([value]) => updateNodeData('temperature', value)}
+                    max={1}
+                    min={0}
+                    step={0.1}
+                    className="mt-2"
+                    data-testid="agent-temperature-slider"
+                  />
+                  <div className="flex justify-between text-xs text-gray-500 mt-1">
+                    <span>0 (Deterministic)</span>
+                    <span>1 (Creative)</span>
+                  </div>
+                </div>
+
+                <div>
+                  <Label htmlFor="max-tokens" className="text-sm font-medium text-gray-700">
+                    Max Tokens
+                  </Label>
+                  <Input
+                    id="max-tokens"
+                    type="number"
+                    value={selectedNode.data.maxTokens || 500}
+                    onChange={(e) => updateNodeData('maxTokens', parseInt(e.target.value))}
+                    className="mt-1"
+                    data-testid="agent-max-tokens-input"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="prompt" className="text-sm font-medium text-gray-700">
+                    Agent Prompt
+                  </Label>
+                  <Textarea
+                    id="prompt"
+                    rows={4}
+                    value={selectedNode.data.prompt || ''}
+                    onChange={(e) => updateNodeData('prompt', e.target.value)}
+                    placeholder="You are an AI agent with access to tools..."
+                    className="mt-1"
+                    data-testid="agent-prompt-input"
+                  />
+                </div>
+
+                <div>
+                  <Label className="text-sm font-medium text-gray-700">
+                    Features
+                  </Label>
+                  <div className="mt-2 space-y-2">
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        id="memory"
+                        checked={selectedNode.data.memory || false}
+                        onCheckedChange={(checked) => updateNodeData('memory', checked)}
+                        data-testid="memory-switch"
+                      />
+                      <Label htmlFor="memory" className="text-sm">
+                        Memory (Context retention)
+                      </Label>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <Label className="text-sm font-medium text-gray-700">
+                    Provider Status
+                  </Label>
+                  <div className="mt-2 p-3 bg-muted rounded-md">
+                    <p className="text-sm">
+                      <Badge variant={selectedNode.data.provider === 'openai' ? 'default' : 'secondary'}>
+                        {getProviderName(selectedNode.data.provider || 'openai')}
+                      </Badge>
+                    </p>
+                    {selectedNode.data.provider !== 'openai' && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Note: This provider needs API key configuration
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>

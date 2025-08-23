@@ -1,6 +1,7 @@
 import { type WorkflowNode, type WorkflowEdge, type WorkflowExecution } from "@shared/schema";
 import { openaiService } from "./openai-service";
-import { storage } from "../storage";
+import { llmService } from "./llm-service";
+import { getStorage } from "../config/storage";
 
 export interface NodeExecutionResult {
   success: boolean;
@@ -211,14 +212,19 @@ export class WorkflowEngine {
 
   private async executeAgent(node: WorkflowNode, context: WorkflowContext): Promise<NodeExecutionResult> {
     try {
-      const { prompt } = node.data;
+      const { prompt, provider = 'openai', model = 'gpt-4o', temperature = 0.7, maxTokens = 500 } = node.data;
       const interpolatedPrompt = this.interpolateTemplate(prompt || "", context);
       
-      const response = await openaiService.generateResponse(interpolatedPrompt, context.previousResults);
+      const response = await llmService.generateResponse(
+        provider,
+        model,
+        interpolatedPrompt,
+        context.previousResults
+      );
 
       return {
         success: true,
-        data: { response, context: context.previousResults },
+        data: { response, context: context.previousResults, provider, model },
       };
     } catch (error) {
       return {
