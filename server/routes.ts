@@ -5,11 +5,15 @@ import { workflowEngine } from "./services/workflow-engine";
 import { insertWorkflowSchema, insertWorkflowExecutionSchema } from "@shared/schema";
 import { requireAuth, optionalAuth, type AuthRequest } from "./middleware/auth";
 import { registerAuthRoutes } from "./routes/auth";
+import { registerTestRoutes } from "./routes/test";
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Register authentication routes
   registerAuthRoutes(app);
+  
+  // Register test routes
+  registerTestRoutes(app);
   
   // Workflow routes (with optional auth for user scoping)
   app.get("/api/workflows", optionalAuth, async (req, res) => {

@@ -22,7 +22,10 @@ export class WorkflowEngine {
     edges: WorkflowEdge[],
     input?: any
   ): Promise<WorkflowExecution> {
+    console.log(`Starting workflow execution: ${workflowId}`);
+    
     // Create execution record
+    const storage = await getStorage();
     const execution = await storage.createWorkflowExecution({
       workflowId,
       input: input || {},

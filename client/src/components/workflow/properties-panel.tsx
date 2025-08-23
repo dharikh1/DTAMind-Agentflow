@@ -391,11 +391,11 @@ export function PropertiesPanel({
                     Provider Status
                   </Label>
                   <div className="mt-2 p-3 bg-muted rounded-md">
-                    <p className="text-sm">
+                    <div className="text-sm">
                       <Badge variant={selectedNode.data.provider === 'openai' ? 'default' : 'secondary'}>
                         {getProviderName(selectedNode.data.provider || 'openai')}
                       </Badge>
-                    </p>
+                    </div>
                     {selectedNode.data.provider !== 'openai' && (
                       <p className="text-xs text-muted-foreground mt-1">
                         Note: This provider needs API key configuration

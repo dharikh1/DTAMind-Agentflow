@@ -7,6 +7,7 @@ import { AuthProvider, useAuth } from "./lib/auth";
 import { Navbar } from "./components/layout/navbar";
 import WorkflowBuilder from "@/pages/workflow-builder";
 import { AuthPage } from "@/pages/auth";
+import { TestPage } from "@/pages/test";
 import NotFound from "@/pages/not-found";
 import { Loader2 } from "lucide-react";
 
@@ -32,6 +33,7 @@ function Router() {
         <Switch>
           <Route path="/" component={WorkflowBuilder} />
           <Route path="/workflow/:id?" component={WorkflowBuilder} />
+          <Route path="/test" component={TestPage} />
           <Route component={NotFound} />
         </Switch>
       </main>
