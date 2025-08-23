@@ -5,12 +5,14 @@ export interface IStorage {
   // User methods
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
+  getUserByEmail?(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  verifyPassword?(email: string, password: string): Promise<User | null>;
   
   // Workflow methods
   getWorkflows(userId?: string): Promise<Workflow[]>;
   getWorkflow(id: string): Promise<Workflow | undefined>;
-  createWorkflow(workflow: InsertWorkflow): Promise<Workflow>;
+  createWorkflow(workflow: InsertWorkflow & { userId?: string }): Promise<Workflow>;
   updateWorkflow(id: string, updates: Partial<InsertWorkflow>): Promise<Workflow | undefined>;
   deleteWorkflow(id: string): Promise<boolean>;
   
@@ -35,7 +37,10 @@ export class MemStorage implements IStorage {
     const defaultUser: User = {
       id: "default-user",
       username: "demo",
-      password: "demo123"
+      email: "demo@example.com",
+      password: "demo123",
+      createdAt: new Date(),
+      updatedAt: new Date()
     };
     this.users.set(defaultUser.id, defaultUser);
   }
@@ -50,9 +55,21 @@ export class MemStorage implements IStorage {
     );
   }
 
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    return Array.from(this.users.values()).find(
+      (user) => user.email === email,
+    );
+  }
+
   async createUser(insertUser: InsertUser): Promise<User> {
     const id = randomUUID();
-    const user: User = { ...insertUser, id };
+    const now = new Date();
+    const user: User = { 
+      ...insertUser, 
+      id,
+      createdAt: now,
+      updatedAt: now
+    };
     this.users.set(id, user);
     return user;
   }
@@ -66,13 +83,13 @@ export class MemStorage implements IStorage {
     return this.workflows.get(id);
   }
 
-  async createWorkflow(insertWorkflow: InsertWorkflow): Promise<Workflow> {
+  async createWorkflow(insertWorkflow: InsertWorkflow & { userId?: string }): Promise<Workflow> {
     const id = randomUUID();
     const now = new Date();
     const workflow: Workflow = {
       ...insertWorkflow,
       id,
-      userId: "default-user", // Default to demo user
+      userId: insertWorkflow.userId || "default-user", // Default to demo user
       description: insertWorkflow.description || null,
       nodes: insertWorkflow.nodes || [],
       edges: insertWorkflow.edges || [],
@@ -141,4 +158,5 @@ export class MemStorage implements IStorage {
   }
 }
 
+// Default in-memory storage - can be replaced by database storage
 export const storage = new MemStorage();

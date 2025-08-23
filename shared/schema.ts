@@ -6,7 +6,10 @@ import { z } from "zod";
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   username: text("username").notNull().unique(),
+  email: text("email").notNull().unique(),
   password: text("password").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 export const workflows = pgTable("workflows", {
@@ -35,7 +38,19 @@ export const workflowExecutions = pgTable("workflow_executions", {
 
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
+  email: true,
   password: true,
+});
+
+export const loginUserSchema = z.object({
+  email: z.string().email('Invalid email format'),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
+});
+
+export const registerUserSchema = z.object({
+  username: z.string().min(2, 'Username must be at least 2 characters'),
+  email: z.string().email('Invalid email format'),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
 });
 
 export const insertWorkflowSchema = createInsertSchema(workflows).pick({
@@ -53,6 +68,8 @@ export const insertWorkflowExecutionSchema = createInsertSchema(workflowExecutio
 });
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
+export type LoginUser = z.infer<typeof loginUserSchema>;
+export type RegisterUser = z.infer<typeof registerUserSchema>;
 export type User = typeof users.$inferSelect;
 export type InsertWorkflow = z.infer<typeof insertWorkflowSchema>;
 export type Workflow = typeof workflows.$inferSelect;

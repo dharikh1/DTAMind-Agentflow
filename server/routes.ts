@@ -1,37 +1,48 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import { storage } from "./storage";
+import { getStorage } from "./config/storage";
 import { workflowEngine } from "./services/workflow-engine";
 import { insertWorkflowSchema, insertWorkflowExecutionSchema } from "@shared/schema";
+import { requireAuth, optionalAuth, type AuthRequest } from "./middleware/auth";
+import { registerAuthRoutes } from "./routes/auth";
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Workflow routes
-  app.get("/api/workflows", async (req, res) => {
+  // Register authentication routes
+  registerAuthRoutes(app);
+  
+  // Workflow routes (with optional auth for user scoping)
+  app.get("/api/workflows", optionalAuth, async (req, res) => {
     try {
-      const workflows = await storage.getWorkflows();
+      const storage = await getStorage();
+      const userId = req.user?.id;
+      const workflows = await storage.getWorkflows(userId);
       res.json(workflows);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch workflows" });
     }
   });
 
-  app.get("/api/workflows/:id", async (req, res) => {
+  app.get("/api/workflows/:id", optionalAuth, async (req, res) => {
     try {
+      const storage = await getStorage();
       const workflow = await storage.getWorkflow(req.params.id);
       if (!workflow) {
         return res.status(404).json({ error: "Workflow not found" });
       }
+      // Optional: Add user access control here if needed
       res.json(workflow);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch workflow" });
     }
   });
 
-  app.post("/api/workflows", async (req, res) => {
+  app.post("/api/workflows", optionalAuth, async (req, res) => {
     try {
+      const storage = await getStorage();
       const validatedData = insertWorkflowSchema.parse(req.body);
-      const workflow = await storage.createWorkflow(validatedData);
+      const userId = req.user?.id || 'default-user';
+      const workflow = await storage.createWorkflow({ ...validatedData, userId });
       res.status(201).json(workflow);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -41,8 +52,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/workflows/:id", async (req, res) => {
+  app.put("/api/workflows/:id", optionalAuth, async (req, res) => {
     try {
+      const storage = await getStorage();
       const validatedData = insertWorkflowSchema.partial().parse(req.body);
       const workflow = await storage.updateWorkflow(req.params.id, validatedData);
       if (!workflow) {
@@ -57,8 +69,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/workflows/:id", async (req, res) => {
+  app.delete("/api/workflows/:id", optionalAuth, async (req, res) => {
     try {
+      const storage = await getStorage();
       const deleted = await storage.deleteWorkflow(req.params.id);
       if (!deleted) {
         return res.status(404).json({ error: "Workflow not found" });
@@ -70,8 +83,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Workflow execution routes
-  app.post("/api/workflows/:id/execute", async (req, res) => {
+  app.post("/api/workflows/:id/execute", optionalAuth, async (req, res) => {
     try {
+      const storage = await getStorage();
       const workflow = await storage.getWorkflow(req.params.id);
       if (!workflow) {
         return res.status(404).json({ error: "Workflow not found" });
@@ -94,8 +108,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/workflows/:id/executions", async (req, res) => {
+  app.get("/api/workflows/:id/executions", optionalAuth, async (req, res) => {
     try {
+      const storage = await getStorage();
       const executions = await storage.getWorkflowExecutions(req.params.id);
       res.json(executions);
     } catch (error) {
@@ -103,8 +118,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/executions/:id", async (req, res) => {
+  app.get("/api/executions/:id", optionalAuth, async (req, res) => {
     try {
+      const storage = await getStorage();
       const execution = await storage.getWorkflowExecution(req.params.id);
       if (!execution) {
         return res.status(404).json({ error: "Execution not found" });
