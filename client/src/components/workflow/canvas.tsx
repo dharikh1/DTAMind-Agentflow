@@ -19,10 +19,19 @@ import 'reactflow/dist/style.css';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { CustomNode } from './custom-node';
+import { LangChainNode } from './langchain-node';
 import { NODE_TYPES } from '@/lib/node-types';
+import { LANGCHAIN_NODE_TYPES } from '@/lib/langchain-node-types';
 
 const nodeTypes = {
   customNode: CustomNode,
+  // Register all LangChain node types
+  ...Object.fromEntries(
+    LANGCHAIN_NODE_TYPES.map(nodeType => [
+      nodeType.id,
+      LangChainNode
+    ])
+  )
 };
 
 interface CanvasProps {
@@ -105,21 +114,41 @@ function CanvasContent({
         y: event.clientY - reactFlowBounds.top,
       });
 
-      const nodeConfig = NODE_TYPES[nodeType as keyof typeof NODE_TYPES];
-      const newNode: Node = {
-        id: `${nodeType}-${Date.now()}`,
-        type: 'customNode',
-        position,
-        data: {
-          nodeType,
-          label: nodeConfig.label,
-          description: nodeConfig.description,
-          category: nodeConfig.category,
-          ...nodeConfig.defaultData,
-        },
-      };
-
-      onNodesChange([{ type: 'add', item: newNode }]);
+      // Check if it's a LangChain node type
+      const langChainNodeType = LANGCHAIN_NODE_TYPES.find(lt => lt.id === nodeType);
+      
+      if (langChainNodeType) {
+        // Create LangChain node
+        const newNode: Node = {
+          id: `${nodeType}-${Date.now()}`,
+          type: nodeType, // Use the actual node type ID
+          position,
+          data: {
+            name: langChainNodeType.name,
+            type: langChainNodeType.id,
+            category: langChainNodeType.category,
+            color: langChainNodeType.color,
+            config: langChainNodeType.defaultData,
+          },
+        };
+        onNodesChange([{ type: 'add', item: newNode }]);
+      } else {
+        // Create original node type
+        const nodeConfig = NODE_TYPES[nodeType as keyof typeof NODE_TYPES];
+        const newNode: Node = {
+          id: `${nodeType}-${Date.now()}`,
+          type: 'customNode',
+          position,
+          data: {
+            nodeType,
+            label: nodeConfig.label,
+            description: nodeConfig.description,
+            category: nodeConfig.category,
+            ...nodeConfig.defaultData,
+          },
+        };
+        onNodesChange([{ type: 'add', item: newNode }]);
+      }
     },
     [reactFlowInstance, onNodesChange]
   );

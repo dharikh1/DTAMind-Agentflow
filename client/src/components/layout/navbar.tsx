@@ -8,7 +8,7 @@ import {
   DropdownMenuItem, 
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
-import { LogOut, User, Zap, Workflow } from 'lucide-react';
+import { LogOut, User, Zap, Workflow, Settings, Sparkles, TrendingUp, Activity } from 'lucide-react';
 
 export function Navbar() {
   const { user, logout } = useAuth();
@@ -28,13 +28,31 @@ export function Navbar() {
           
           <div className="flex items-center space-x-2">
             <Button
-              variant={location === '/' ? 'default' : 'ghost'}
+              variant={location === '/' || location === '/dashboard' ? 'default' : 'ghost'}
               size="sm"
               onClick={() => navigate('/')}
+              data-testid="nav-dashboard"
+            >
+              <TrendingUp className="mr-2 h-4 w-4" />
+              Dashboard
+            </Button>
+            <Button
+              variant={location === '/workflow' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => navigate('/workflow')}
               data-testid="nav-workflows"
             >
               <Workflow className="mr-2 h-4 w-4" />
               Workflows
+            </Button>
+            <Button
+              variant={location === '/executions' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => navigate('/executions')}
+              data-testid="nav-executions"
+            >
+              <Activity className="mr-2 h-4 w-4" />
+              Executions
             </Button>
             <Button
               variant={location === '/test' ? 'default' : 'ghost'}
@@ -44,6 +62,24 @@ export function Navbar() {
             >
               <Zap className="mr-2 h-4 w-4" />
               Test API
+            </Button>
+            <Button
+              variant={location === '/templates' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => navigate('/templates')}
+              data-testid="nav-templates"
+            >
+              <Sparkles className="mr-2 h-4 w-4" />
+              Templates
+            </Button>
+            <Button
+              variant={location === '/settings' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => navigate('/settings')}
+              data-testid="nav-settings"
+            >
+              <Settings className="mr-2 h-4 w-4" />
+              Settings
             </Button>
           </div>
         </div>

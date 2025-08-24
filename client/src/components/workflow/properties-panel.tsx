@@ -10,6 +10,7 @@ import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { NODE_TYPES } from '@/lib/node-types';
+import { LANGCHAIN_NODE_TYPES, getNodeTypeById } from '@/lib/langchain-node-types';
 import { LLM_PROVIDERS, getProviderModels, getProviderName, supportsSystemPrompt } from '@/lib/llm-providers';
 
 interface PropertiesPanelProps {
@@ -129,11 +130,23 @@ export function PropertiesPanel({
             <div className={`w-4 h-4 ${colors.accent} rounded-full`} />
             <div>
               <h4 className="text-sm font-semibold text-gray-900" data-testid="selected-node-name">
-                {selectedNode.data.label}
+                {selectedNode.data.name || selectedNode.data.label}
               </h4>
               <p className="text-xs text-gray-600" data-testid="selected-node-id">
                 {selectedNode.id}
               </p>
+              {selectedNode.data.category && (
+                <Badge 
+                  variant="secondary" 
+                  className="text-xs mt-1"
+                  style={{ 
+                    backgroundColor: selectedNode.data.color ? `${selectedNode.data.color}20` : undefined,
+                    color: selectedNode.data.color || undefined
+                  }}
+                >
+                  {selectedNode.data.category}
+                </Badge>
+              )}
             </div>
           </div>
 
@@ -149,8 +162,14 @@ export function PropertiesPanel({
                 </Label>
                 <Input
                   id="node-label"
-                  value={selectedNode.data.label || ''}
-                  onChange={(e) => updateNodeData('label', e.target.value)}
+                  value={selectedNode.data.name || selectedNode.data.label || ''}
+                  onChange={(e) => {
+                    if (selectedNode.data.name) {
+                      updateNodeData('name', e.target.value);
+                    } else {
+                      updateNodeData('label', e.target.value);
+                    }
+                  }}
                   className="mt-1"
                   data-testid="node-label-input"
                 />
@@ -524,6 +543,219 @@ export function PropertiesPanel({
             </div>
           )}
 
+          {/* LangChain Node Configuration */}
+          {LANGCHAIN_NODE_TYPES.some(lt => lt.id === selectedNode.data.type) && (
+            <div>
+              <Label className="text-xs font-semibold text-gray-700 uppercase tracking-wide">
+                LangChain Configuration
+              </Label>
+              <div className="mt-2 space-y-3">
+                {(() => {
+                  const langChainNodeType = getNodeTypeById(selectedNode.data.type);
+                  if (!langChainNodeType) return null;
+                  
+                  return langChainNodeType.config.map((configItem) => {
+                    const currentValue = selectedNode.data.config?.[configItem.key] ?? configItem.defaultValue;
+                    
+                    switch (configItem.type) {
+                      case 'text':
+                        return (
+                          <div key={configItem.key}>
+                            <Label htmlFor={configItem.key} className="text-sm font-medium text-gray-700">
+                              {configItem.label}
+                              {configItem.required && <span className="text-red-500 ml-1">*</span>}
+                            </Label>
+                            <Input
+                              id={configItem.key}
+                              value={currentValue || ''}
+                              onChange={(e) => {
+                                const newConfig = { ...selectedNode.data.config, [configItem.key]: e.target.value };
+                                updateNodeData('config', newConfig);
+                              }}
+                              placeholder={configItem.placeholder}
+                              className="mt-1"
+                            />
+                            {configItem.description && (
+                              <p className="text-xs text-muted-foreground mt-1">{configItem.description}</p>
+                            )}
+                          </div>
+                        );
+                      
+                      case 'select':
+                        return (
+                          <div key={configItem.key}>
+                            <Label htmlFor={configItem.key} className="text-sm font-medium text-gray-700">
+                              {configItem.label}
+                              {configItem.required && <span className="text-red-500 ml-1">*</span>}
+                            </Label>
+                            <Select 
+                              value={currentValue || configItem.defaultValue} 
+                              onValueChange={(value) => {
+                                const newConfig = { ...selectedNode.data.config, [configItem.key]: value };
+                                updateNodeData('config', newConfig);
+                              }}
+                            >
+                              <SelectTrigger className="mt-1">
+                                <SelectValue placeholder={`Select ${configItem.label.toLowerCase()}`} />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {configItem.options?.map((option) => (
+                                  <SelectItem key={option} value={option}>
+                                    {option}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            {configItem.description && (
+                              <p className="text-xs text-muted-foreground mt-1">{configItem.description}</p>
+                            )}
+                          </div>
+                        );
+                      
+                      case 'number':
+                        return (
+                          <div key={configItem.key}>
+                            <Label htmlFor={configItem.key} className="text-sm font-medium text-gray-700">
+                              {configItem.label}
+                              {configItem.required && <span className="text-red-500 ml-1">*</span>}
+                            </Label>
+                            <Input
+                              id={configItem.key}
+                              type="number"
+                              value={currentValue || configItem.defaultValue}
+                              onChange={(e) => {
+                                const newConfig = { ...selectedNode.data.config, [configItem.key]: parseFloat(e.target.value) };
+                                updateNodeData('config', newConfig);
+                              }}
+                              placeholder={configItem.placeholder}
+                              className="mt-1"
+                            />
+                            {configItem.description && (
+                              <p className="text-xs text-muted-foreground mt-1">{configItem.description}</p>
+                            )}
+                          </div>
+                        );
+                      
+                      case 'textarea':
+                        return (
+                          <div key={configItem.key}>
+                            <Label htmlFor={configItem.key} className="text-sm font-medium text-gray-700">
+                              {configItem.label}
+                              {configItem.required && <span className="text-red-500 ml-1">*</span>}
+                            </Label>
+                            <Textarea
+                              id={configItem.key}
+                              rows={3}
+                              value={currentValue || ''}
+                              onChange={(e) => {
+                                const newConfig = { ...selectedNode.data.config, [configItem.key]: e.target.value };
+                                updateNodeData('config', newConfig);
+                              }}
+                              placeholder={configItem.placeholder}
+                              className="mt-1"
+                            />
+                            {configItem.description && (
+                              <p className="text-xs text-muted-foreground mt-1">{configItem.description}</p>
+                            )}
+                          </div>
+                        );
+                      
+                      case 'boolean':
+                        return (
+                          <div key={configItem.key}>
+                            <div className="flex items-center space-x-2">
+                              <Switch
+                                id={configItem.key}
+                                checked={currentValue || false}
+                                onCheckedChange={(checked) => {
+                                  const newConfig = { ...selectedNode.data.config, [configItem.key]: checked };
+                                  updateNodeData('config', newConfig);
+                                }}
+                              />
+                              <Label htmlFor={configItem.key} className="text-sm font-medium text-gray-700">
+                                {configItem.label}
+                                {configItem.required && <span className="text-red-500 ml-1">*</span>}
+                              </Label>
+                            </div>
+                            {configItem.description && (
+                              <p className="text-xs text-muted-foreground mt-1">{configItem.description}</p>
+                            )}
+                          </div>
+                        );
+                      
+                      default:
+                        return null;
+                    }
+                  });
+                })()}
+              </div>
+            </div>
+          )}
+
+          {/* RAG Workflow Configuration */}
+          {selectedNode.data.type === 'pdf-loader' && (
+            <div>
+              <Label className="text-xs font-semibold text-gray-700 uppercase tracking-wide">
+                RAG Workflow Settings
+              </Label>
+              <div className="mt-2 space-y-3">
+                <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                    <span className="text-sm font-medium text-blue-800">Document Processing</span>
+                  </div>
+                  <p className="text-xs text-blue-700">
+                    This node will extract text from PDF documents for vector storage and retrieval.
+                    Connect it to a vector store node to enable RAG capabilities.
+                  </p>
+                </div>
+                
+                <div className="p-3 bg-green-50 rounded-lg border border-green-200">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                    <span className="text-sm font-medium text-green-800">Next Steps</span>
+                  </div>
+                  <p className="text-xs text-green-700">
+                    • Connect to a Vector Store node to store embeddings<br/>
+                    • Add an AI Model node to answer questions<br/>
+                    • Use the Conversation Memory node for context retention
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {selectedNode.data.type === 'pinecone-store' && (
+            <div>
+              <Label className="text-xs font-semibold text-gray-700 uppercase tracking-wide">
+                Vector Store Setup
+              </Label>
+              <div className="mt-2 space-y-3">
+                <div className="p-3 bg-purple-50 rounded-lg border border-purple-200">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                    <span className="text-sm font-medium text-purple-800">Pinecone Configuration</span>
+                  </div>
+                  <p className="text-xs text-purple-700">
+                    Configure your Pinecone vector database for storing document embeddings.
+                    Make sure your Pinecone index is created and accessible.
+                  </p>
+                </div>
+                
+                <div className="p-3 bg-amber-50 rounded-lg border border-amber-200">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <div className="w-2 h-2 bg-amber-500 rounded-full"></div>
+                    <span className="text-sm font-medium text-amber-800">Security Note</span>
+                  </div>
+                  <p className="text-xs text-amber-700">
+                    Store your Pinecone API key securely. Consider using environment variables
+                    for production deployments.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           <Separator />
 
           {/* Actions */}
@@ -533,7 +765,7 @@ export function PropertiesPanel({
               className="w-full" 
               data-testid="test-node-button"
             >
-              Test Node
+              {LANGCHAIN_NODE_TYPES.some(lt => lt.id === selectedNode.data.type) ? 'Test LangChain Node' : 'Test Node'}
             </Button>
             
             <Button 

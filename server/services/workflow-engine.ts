@@ -1,6 +1,7 @@
 import { type WorkflowNode, type WorkflowEdge, type WorkflowExecution } from "@shared/schema";
 import { openaiService } from "./openai-service";
 import { llmService } from "./llm-service";
+import { langChainService } from "./langchain-service";
 import { getStorage } from "../config/storage";
 
 export interface NodeExecutionResult {
@@ -118,6 +119,11 @@ export class WorkflowEngine {
   }
 
   private async executeNode(node: WorkflowNode, context: WorkflowContext): Promise<NodeExecutionResult> {
+    // Check if this is a LangChain node type
+    if (this.isLangChainNode(node)) {
+      return this.executeLangChainNode(node, context);
+    }
+
     switch (node.type) {
       case 'manual':
         return this.executeManualTrigger(node, context);
@@ -330,6 +336,379 @@ export class WorkflowEngine {
     return template.replace(/\{\{(\w+)\}\}/g, (match, key) => {
       return context.variables[key] || context.previousResults[key] || match;
     });
+  }
+
+  // LangChain Node Support
+  private isLangChainNode(node: WorkflowNode): boolean {
+    const langChainNodeTypes = [
+      'pdf-loader', 'csv-loader', 'url-scraper', 'pinecone-store', 'weaviate-store',
+      'openai-chat', 'anthropic-chat', 'conversation-memory', 'web-search', 'code-executor'
+    ];
+    return langChainNodeTypes.includes(node.data.type);
+  }
+
+  private async executeLangChainNode(node: WorkflowNode, context: WorkflowContext): Promise<NodeExecutionResult> {
+    try {
+      const nodeType = node.data.type;
+      const config = node.data.config || {};
+
+      switch (nodeType) {
+        case 'pdf-loader':
+          return await this.executePDFLoader(node, context, config);
+        
+        case 'csv-loader':
+          return await this.executeCSVLoader(node, context, config);
+        
+        case 'url-scraper':
+          return await this.executeURLScraper(node, context, config);
+        
+        case 'pinecone-store':
+          return await this.executePineconeStore(node, context, config);
+        
+        case 'weaviate-store':
+          return await this.executeWeaviateStore(node, context, config);
+        
+        case 'openai-chat':
+          return await this.executeOpenAIChat(node, context, config);
+        
+        case 'anthropic-chat':
+          return await this.executeAnthropicChat(node, context, config);
+        
+        case 'conversation-memory':
+          return await this.executeConversationMemory(node, context, config);
+        
+        case 'web-search':
+          return await this.executeWebSearch(node, context, config);
+        
+        case 'code-executor':
+          return await this.executeCodeExecutor(node, context, config);
+        
+        default:
+          return {
+            success: false,
+            error: `Unsupported LangChain node type: ${nodeType}`,
+          };
+      }
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'LangChain node execution failed',
+      };
+    }
+  }
+
+  private async executePDFLoader(node: WorkflowNode, context: WorkflowContext, config: any): Promise<NodeExecutionResult> {
+    try {
+      const filePath = this.interpolateTemplate(config.filePath || '', context);
+      const pages = config.pages;
+      
+      const result = await langChainService.processPDF(filePath, pages);
+      
+      if (result.success) {
+        return {
+          success: true,
+          data: {
+            content: result.content,
+            metadata: result.metadata,
+            nodeType: 'pdf-loader'
+          }
+        };
+      } else {
+        return {
+          success: false,
+          error: result.error
+        };
+      }
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'PDF loader execution failed',
+      };
+    }
+  }
+
+  private async executeCSVLoader(node: WorkflowNode, context: WorkflowContext, config: any): Promise<NodeExecutionResult> {
+    try {
+      const filePath = this.interpolateTemplate(config.filePath || '', context);
+      const delimiter = config.delimiter || ',';
+      
+      const result = await langChainService.processCSV(filePath, delimiter);
+      
+      if (result.success) {
+        return {
+          success: true,
+          data: {
+            content: result.content,
+            metadata: result.metadata,
+            nodeType: 'csv-loader'
+          }
+        };
+      } else {
+        return {
+          success: false,
+          error: result.error
+        };
+      }
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'CSV loader execution failed',
+      };
+    }
+  }
+
+  private async executeURLScraper(node: WorkflowNode, context: WorkflowContext, config: any): Promise<NodeExecutionResult> {
+    try {
+      const url = this.interpolateTemplate(config.url || '', context);
+      const selector = config.selector;
+      
+      const result = await langChainService.scrapeURL(url, selector);
+      
+      if (result.success) {
+        return {
+          success: true,
+          data: {
+            content: result.content,
+            metadata: result.metadata,
+            nodeType: 'url-scraper'
+          }
+        };
+      } else {
+        return {
+          success: false,
+          error: result.error
+        };
+      }
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'URL scraper execution failed',
+      };
+    }
+  }
+
+  private async executePineconeStore(node: WorkflowNode, context: WorkflowContext, config: any): Promise<NodeExecutionResult> {
+    try {
+      const apiKey = this.interpolateTemplate(config.apiKey || '', context);
+      const environment = this.interpolateTemplate(config.environment || '', context);
+      const indexName = this.interpolateTemplate(config.indexName || '', context);
+      
+      const result = await langChainService.createPineconeStore(apiKey, environment, indexName);
+      
+      if (result.success) {
+        return {
+          success: true,
+          data: {
+            vectorStoreId: result.vectorId,
+            nodeType: 'pinecone-store'
+          }
+        };
+      } else {
+        return {
+          success: false,
+          error: result.error
+        };
+      }
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Pinecone store execution failed',
+      };
+    }
+  }
+
+  private async executeWeaviateStore(node: WorkflowNode, context: WorkflowContext, config: any): Promise<NodeExecutionResult> {
+    try {
+      const url = this.interpolateTemplate(config.url || '', context);
+      const className = this.interpolateTemplate(config.className || '', context);
+      
+      const result = await langChainService.createWeaviateStore(url, className);
+      
+      if (result.success) {
+        return {
+          success: true,
+          data: {
+            vectorStoreId: result.vectorId,
+            nodeType: 'weaviate-store'
+          }
+        };
+      } else {
+        return {
+          success: false,
+          error: result.error
+        };
+      }
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Weaviate store execution failed',
+      };
+    }
+  }
+
+  private async executeOpenAIChat(node: WorkflowNode, context: WorkflowContext, config: any): Promise<NodeExecutionResult> {
+    try {
+      const messages = config.messages || [];
+      const model = config.model || 'gpt-4o';
+      const temperature = config.temperature || 0.7;
+      const maxTokens = config.maxTokens || 1000;
+      
+      // Interpolate message content
+      const interpolatedMessages = messages.map((msg: any) => ({
+        ...msg,
+        content: this.interpolateTemplate(msg.content || '', context)
+      }));
+      
+      const result = await langChainService.chatWithOpenAI(interpolatedMessages, model, temperature, maxTokens);
+      
+      if (result.success) {
+        return {
+          success: true,
+          data: {
+            response: result.response,
+            nodeType: 'openai-chat'
+          }
+        };
+      } else {
+        return {
+          success: false,
+          error: result.error
+        };
+      }
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'OpenAI chat execution failed',
+      };
+    }
+  }
+
+  private async executeAnthropicChat(node: WorkflowNode, context: WorkflowContext, config: any): Promise<NodeExecutionResult> {
+    try {
+      const messages = config.messages || [];
+      const model = config.model || 'claude-3-5-sonnet-20241022';
+      const temperature = config.temperature || 0.7;
+      
+      // Interpolate message content
+      const interpolatedMessages = messages.map((msg: any) => ({
+        ...msg,
+        content: this.interpolateTemplate(msg.content || '', context)
+      }));
+      
+      const result = await langChainService.chatWithAnthropic(interpolatedMessages, model, temperature);
+      
+      if (result.success) {
+        return {
+          success: true,
+          data: {
+            response: result.response,
+            nodeType: 'anthropic-chat'
+          }
+        };
+      } else {
+        return {
+          success: false,
+          error: result.error
+        };
+      }
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Anthropic chat execution failed',
+      };
+    }
+  }
+
+  private async executeConversationMemory(node: WorkflowNode, context: WorkflowContext, config: any): Promise<NodeExecutionResult> {
+    try {
+      const memoryKey = this.interpolateTemplate(config.memoryKey || 'conversation', context);
+      const maxTokens = config.maxTokens || 2000;
+      
+      const result = await langChainService.createConversationMemory(memoryKey, maxTokens);
+      
+      if (result.success) {
+        return {
+          success: true,
+          data: {
+            memoryId: result.memoryId,
+            nodeType: 'conversation-memory'
+          }
+        };
+      } else {
+        return {
+          success: false,
+          error: result.error
+        };
+      }
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Conversation memory execution failed',
+      };
+    }
+  }
+
+  private async executeWebSearch(node: WorkflowNode, context: WorkflowContext, config: any): Promise<NodeExecutionResult> {
+    try {
+      const query = this.interpolateTemplate(config.query || '', context);
+      const searchEngine = config.searchEngine || 'google';
+      const maxResults = config.maxResults || 5;
+      
+      const result = await langChainService.webSearch(query, searchEngine, maxResults);
+      
+      if (result.success) {
+        return {
+          success: true,
+          data: {
+            results: result.results,
+            query,
+            searchEngine,
+            nodeType: 'web-search'
+          }
+        };
+      } else {
+        return {
+          success: false,
+          error: result.error
+        };
+      }
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Web search execution failed',
+      };
+    }
+  }
+
+  private async executeCodeExecutor(node: WorkflowNode, context: WorkflowContext, config: any): Promise<NodeExecutionResult> {
+    try {
+      const code = this.interpolateTemplate(config.code || '', context);
+      const language = config.language || 'python';
+      const timeout = config.timeout || 30;
+      
+      const result = await langChainService.executeCode(code, language, timeout);
+      
+      if (result.success) {
+        return {
+          success: true,
+          data: {
+            result: result.result,
+            language,
+            nodeType: 'code-executor'
+          }
+        };
+      } else {
+        return {
+          success: false,
+          error: result.error
+        };
+      }
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Code executor execution failed',
+      };
+    }
   }
 }
 

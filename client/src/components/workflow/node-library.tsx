@@ -2,6 +2,7 @@ import React from 'react';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { NODE_TYPES } from '@/lib/node-types';
+import { LANGCHAIN_NODE_TYPES, getAllCategories } from '@/lib/langchain-node-types';
 
 export function NodeLibrary() {
   const [searchTerm, setSearchTerm] = React.useState('');
@@ -11,7 +12,24 @@ export function NodeLibrary() {
     event.dataTransfer.effectAllowed = 'move';
   };
 
-  const filteredNodeTypes = Object.entries(NODE_TYPES).filter(([key, config]) => 
+  // Combine original and LangChain node types
+  const allNodeTypes = {
+    ...NODE_TYPES,
+    ...Object.fromEntries(
+      LANGCHAIN_NODE_TYPES.map(nodeType => [
+        nodeType.id,
+        {
+          label: nodeType.name,
+          description: nodeType.description,
+          category: nodeType.category,
+          color: nodeType.color,
+          type: nodeType.id
+        }
+      ])
+    )
+  };
+
+  const filteredNodeTypes = Object.entries(allNodeTypes).filter(([key, config]) => 
     config.label.toLowerCase().includes(searchTerm.toLowerCase()) ||
     config.description.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -23,13 +41,18 @@ export function NodeLibrary() {
     }
     acc[category].push([key, config]);
     return acc;
-  }, {} as Record<string, Array<[string, typeof NODE_TYPES[keyof typeof NODE_TYPES]]>>);
+  }, {} as Record<string, Array<[string, any]>>);
 
   const categoryColors = {
     inputs: 'bg-blue-50 border-blue-200 text-blue-800',
     ai: 'bg-amber-50 border-amber-200 text-amber-800',
     processing: 'bg-emerald-50 border-emerald-200 text-emerald-800',
     outputs: 'bg-red-50 border-red-200 text-red-800',
+    'Document Processing': 'bg-indigo-50 border-indigo-200 text-indigo-800',
+    'Vector Stores': 'bg-purple-50 border-purple-200 text-purple-800',
+    'AI Models': 'bg-green-50 border-green-200 text-green-800',
+    'Memory': 'bg-yellow-50 border-yellow-200 text-yellow-800',
+    'Tools': 'bg-orange-50 border-orange-200 text-orange-800',
   };
 
   return (

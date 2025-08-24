@@ -1,7 +1,18 @@
 import OpenAI from 'openai';
 
-// Initialize OpenAI client
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+// Initialize OpenAI client conditionally
+let openai: OpenAI | null = null;
+
+function getOpenAIClient(): OpenAI {
+  if (!openai) {
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) {
+      throw new Error('OpenAI API key not provided. Set OPENAI_API_KEY environment variable.');
+    }
+    openai = new OpenAI({ apiKey });
+  }
+  return openai;
+}
 
 export interface LLMProvider {
   id: string;
@@ -94,7 +105,8 @@ export class LLMService {
       
       messages.push(...options.messages);
 
-      const response = await openai.chat.completions.create({
+      const openaiClient = getOpenAIClient();
+      const response = await openaiClient.chat.completions.create({
         model: options.model || "gpt-4o", // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
         messages,
         temperature: options.temperature || 0.7,
@@ -149,7 +161,8 @@ export class LLMService {
   // Keep backward compatibility with existing OpenAI methods
   async analyzeSentiment(text: string): Promise<{ sentiment: string; score: number; confidence: number }> {
     try {
-      const response = await openai.chat.completions.create({
+      const openaiClient = getOpenAIClient();
+      const response = await openaiClient.chat.completions.create({
         model: "gpt-4o", // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
         messages: [
           {

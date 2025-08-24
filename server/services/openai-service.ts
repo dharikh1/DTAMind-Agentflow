@@ -1,9 +1,18 @@
 import OpenAI from "openai";
 
 // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY_ENV_VAR || "your_openai_api_key"
-});
+let openai: OpenAI | null = null;
+
+function getOpenAIClient(): OpenAI {
+  if (!openai) {
+    const apiKey = process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY_ENV_VAR;
+    if (!apiKey || apiKey === "your_openai_api_key") {
+      throw new Error('OpenAI API key not provided. Set OPENAI_API_KEY environment variable.');
+    }
+    openai = new OpenAI({ apiKey });
+  }
+  return openai;
+}
 
 export interface ChatMessage {
   role: 'system' | 'user' | 'assistant';
@@ -32,7 +41,8 @@ export class OpenAIService {
       
       messages.push(...options.messages);
 
-      const response = await openai.chat.completions.create({
+      const openaiClient = getOpenAIClient();
+      const response = await openaiClient.chat.completions.create({
         model: options.model || "gpt-4o",
         messages,
         temperature: options.temperature || 0.7,
@@ -48,7 +58,8 @@ export class OpenAIService {
 
   async analyzeSentiment(text: string): Promise<{ sentiment: string; score: number; confidence: number }> {
     try {
-      const response = await openai.chat.completions.create({
+      const openaiClient = getOpenAIClient();
+      const response = await openaiClient.chat.completions.create({
         model: "gpt-4o",
         messages: [
           {
@@ -80,7 +91,8 @@ export class OpenAIService {
     try {
       const systemPrompt = `You are a helpful AI assistant. ${context ? `Context: ${JSON.stringify(context)}` : ''}`;
       
-      const response = await openai.chat.completions.create({
+      const openaiClient = getOpenAIClient();
+      const response = await openaiClient.chat.completions.create({
         model: "gpt-4o",
         messages: [
           { role: "system", content: systemPrompt },

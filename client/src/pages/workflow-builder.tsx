@@ -24,12 +24,21 @@ import { apiRequest } from '@/lib/queryClient';
 import { NodeLibrary } from '@/components/workflow/node-library';
 import { PropertiesPanel } from '@/components/workflow/properties-panel';
 import { CustomNode } from '@/components/workflow/custom-node';
+import { LangChainNode } from '@/components/workflow/langchain-node';
 import { TemplateModal } from '@/components/ui/template-modal';
 import { NODE_TYPES } from '@/lib/node-types';
+import { LANGCHAIN_NODE_TYPES } from '@/lib/langchain-node-types';
 import { type Workflow, type WorkflowNode, type WorkflowEdge } from '@shared/schema';
 
 const nodeTypes = {
   customNode: CustomNode,
+  // Register all LangChain node types
+  ...Object.fromEntries(
+    LANGCHAIN_NODE_TYPES.map(nodeType => [
+      nodeType.id,
+      LangChainNode
+    ])
+  )
 };
 
 export default function WorkflowBuilder() {

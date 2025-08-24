@@ -127,6 +127,118 @@ export const NODE_TYPES = {
       statusCode: 200,
       responseData: '{"status": "success"}'
     }
+  },
+
+  // LangChain Document Processing Nodes
+  'pdf-loader': {
+    label: 'PDF Loader',
+    description: 'Load and extract text from PDF documents',
+    category: 'Document Processing',
+    color: '#3b82f6',
+    defaultData: {
+      filePath: '',
+      pages: ''
+    }
+  },
+  'csv-loader': {
+    label: 'CSV Loader',
+    description: 'Load and parse CSV files',
+    category: 'Document Processing',
+    color: '#10b981',
+    defaultData: {
+      filePath: '',
+      delimiter: ','
+    }
+  },
+  'url-scraper': {
+    label: 'URL Scraper',
+    description: 'Scrape content from web URLs',
+    category: 'Document Processing',
+    color: '#f59e0b',
+    defaultData: {
+      url: '',
+      selector: 'body'
+    }
+  },
+
+  // LangChain Vector Store Nodes
+  'pinecone-store': {
+    label: 'Pinecone Store',
+    description: 'Store and retrieve vectors using Pinecone',
+    category: 'Vector Stores',
+    color: '#8b5cf6',
+    defaultData: {
+      apiKey: '',
+      environment: '',
+      indexName: ''
+    }
+  },
+  'weaviate-store': {
+    label: 'Weaviate Store',
+    description: 'Store and retrieve vectors using Weaviate',
+    category: 'Vector Stores',
+    color: '#06b6d4',
+    defaultData: {
+      url: '',
+      className: ''
+    }
+  },
+
+  // LangChain AI Model Nodes
+  'openai-chat': {
+    label: 'OpenAI Chat',
+    description: 'Chat completion using OpenAI models',
+    category: 'AI Models',
+    color: '#10b981',
+    defaultData: {
+      model: 'gpt-4o',
+      temperature: 0.7,
+      maxTokens: 1000
+    }
+  },
+  'anthropic-chat': {
+    label: 'Anthropic Claude',
+    description: 'Chat completion using Anthropic Claude',
+    category: 'AI Models',
+    color: '#8b5cf6',
+    defaultData: {
+      model: 'claude-3-5-sonnet-20241022',
+      temperature: 0.7
+    }
+  },
+
+  // LangChain Memory Nodes
+  'conversation-memory': {
+    label: 'Conversation Memory',
+    description: 'Store and retrieve conversation history',
+    category: 'Memory',
+    color: '#f59e0b',
+    defaultData: {
+      memoryKey: '',
+      maxTokens: 2000
+    }
+  },
+
+  // LangChain Tool Nodes
+  'web-search': {
+    label: 'Web Search',
+    description: 'Search the web for information',
+    category: 'Tools',
+    color: '#ef4444',
+    defaultData: {
+      searchEngine: 'google',
+      maxResults: 5
+    }
+  },
+  'code-executor': {
+    label: 'Code Executor',
+    description: 'Execute Python or JavaScript code',
+    category: 'Tools',
+    color: '#6366f1',
+    defaultData: {
+      language: 'python',
+      timeout: 30
+    }
   }
 } as const;
 
